@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map - Tijuana (Fitts' Law Optimized)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+        }
+        
+        /* Optimizando según la Ley de Fitts */
+        .leaflet-control-zoom {
+            border: none !important;
+            margin-right: 20px !important;
+            margin-bottom: 30px !important;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* Separación para evitar errores de precisión */
+        }
+        
+        /* Botones más grandes = Objetivo más fácil de alcanzar */
+        .leaflet-control-zoom-in, 
+        .leaflet-control-zoom-out {
+            width: 56px !important; 
+            height: 56px !important;
+            line-height: 56px !important;
+            font-size: 24px !important;
+            border-radius: 16px !important; /* Bordes suaves y modernos */
+            background-color: white !important;
+            color: #1f2937 !important;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s ease, background-color 0.2s;
+        }
+
+        .leaflet-control-zoom-in:active, 
+        .leaflet-control-zoom-out:active {
+            transform: scale(0.95);
+            background-color: #f3f4f6 !important;
+        }
+
+        /* Ocultar atribución pequeña para limpiar la esquina inferior */
+        .leaflet-control-attribution {
+            font-size: 10px !important;
+            background: rgba(255, 255, 255, 0.7) !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 overflow-hidden">
+
+    <main class="relative h-screen w-full">
+        
+        <!-- UI Overlay -->
+        <div class="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-xl max-w-xs border border-gray-100">
+            <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Tijuana, B.C.</h1>
+            <p class="text-sm text-gray-500 mt-2 leading-relaxed">
+                Interfaz optimizada: Botones más grandes y separados para mejorar la velocidad de interacción (Ley de Fitts).
+            </p>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map"></div>
+
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tijuanaCoords = [32.5149, -117.0382];
+            
+            const map = L.map('map', {
+                zoomControl: false // Desactivamos el predeterminado para personalizarlo
+            }).setView(tijuanaCoords, 13);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            // Re-añadir el control en la esquina de mayor accesibilidad (pulgar derecho)
+            L.control.zoom({
+                position: 'bottomright'
+            }).addTo(map);
+
+            const marker = L.marker(tijuanaCoords).addTo(map);
+            marker.bindPopup("<b class='text-lg'>Tijuana</b><br>Optimizado para uso móvil.").openPopup();
+
+            window.addEventListener('resize', () => {
+                map.invalidateSize();
+            });
+        });
+    </script>
+</body>
+</html>
