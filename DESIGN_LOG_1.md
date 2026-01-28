@@ -1,0 +1,4 @@
+Utilice los colores blanco y negro con ligeros toques de amarillo para demostrar algo de elegencia en la página debido a que se trata de una página de rutas para que las personas tengan las mejoras tomas en sus fotografías. Esta es una página para fotografos profesionales o aficionados.
+
+------------------------ Prompt utilizado
+Crea una Landing Page HTML para una app de mapas llamada "fotografía perfecta". Debe tener un 'Hero' con una imagen de fondo de un mapa estilizado o topográfico, un título grande, y un botón CTA prominente que diga 'Explorar Mapa'. Usa Tailwind CSS. El diseño debe inspirar elegancia/limpieza, para demostrar una página donde fotógrafos profesionales o aficionados al área pueda encontrar las mejores rutas donde tomar fotografías.
