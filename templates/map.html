@@ -3,110 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaflet Map - Tijuana (Fitts' Law Optimized)</title>
-    
-    <!-- Tailwind CSS CDN -->
+    <title>Mapa interactivo - Guardar Puntos</title>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 
     <style>
         #map {
             height: 100vh;
             width: 100%;
-            z-index: 1;
         }
-        
-        /* Optimizando según la Ley de Fitts */
+
+        /* Estilo de controles tipo Google */
         .leaflet-control-zoom {
             border: none !important;
-            margin-right: 20px !important;
-            margin-bottom: 30px !important;
-            display: flex;
-            flex-direction: column;
-            gap: 12px; /* Separación para evitar errores de precisión */
+            margin-right: 16px !important;
+            margin-bottom: 16px !important;
+        }
+
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out {
+            width: 48px !important;
+            height: 48px !important;
+            line-height: 48px !important;
+            border-radius: 8px !important;
+            background-color: white !important;
+            color: #5f6368 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+            border: 1px solid #ddd !important;
+            margin-bottom: 8px !important;
+        }
+
+        /* Transiciones suaves para el Toast */
+        #toast {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
         }
         
-        /* Botones más grandes = Objetivo más fácil de alcanzar */
-        .leaflet-control-zoom-in, 
-        .leaflet-control-zoom-out {
-            width: 56px !important; 
-            height: 56px !important;
-            line-height: 56px !important;
-            font-size: 24px !important;
-            border-radius: 16px !important; /* Bordes suaves y modernos */
-            background-color: white !important;
-            color: #1f2937 !important;
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.1s ease, background-color 0.2s;
-        }
-
-        .leaflet-control-zoom-in:active, 
-        .leaflet-control-zoom-out:active {
-            transform: scale(0.95);
-            background-color: #f3f4f6 !important;
-        }
-
-        /* Ocultar atribución pequeña para limpiar la esquina inferior */
-        .leaflet-control-attribution {
-            font-size: 10px !important;
-            background: rgba(255, 255, 255, 0.7) !important;
+        #toast.hidden {
+            transform: translate(-50%, 100px);
+            opacity: 0;
+            display: flex; /* Mantenemos flex para la transición */
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-gray-100 overflow-hidden">
 
-    <main class="relative h-screen w-full">
-        
-        <!-- UI Overlay -->
-        <div class="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md p-5 rounded-2xl shadow-xl max-w-xs border border-gray-100">
-            <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Tijuana, B.C.</h1>
-            <p class="text-sm text-gray-500 mt-2 leading-relaxed">
-                Interfaz optimizada: Botones más grandes y separados para mejorar la velocidad de interacción (Ley de Fitts).
-            </p>
+<body class="bg-gray-100 overflow-hidden text-gray-900 font-sans">
+
+<main class="relative h-screen w-full">
+
+    <!-- Panel informativo -->
+    <div class="absolute z-[1000] bg-white p-4 rounded-xl shadow-lg border border-gray-200 text-sm
+                top-4 left-1/2 -translate-x-1/2 md:top-4 md:right-4 md:left-auto md:translate-x-0
+                w-64">
+        <h2 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
+            <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+            Ruta actual
+        </h2>
+        <div class="flex justify-between mb-1">
+            <span class="text-gray-500">Puntos:</span>
+            <span id="point-count" class="font-mono font-bold">0</span>
         </div>
+        <div class="flex justify-between">
+            <span class="text-gray-500">Distancia:</span>
+            <span id="distance" class="font-mono font-bold">0.00 km</span>
+        </div>
+        <p class="text-[11px] text-gray-400 mt-3 italic">
+            Haz clic en cualquier lugar para marcar.
+        </p>
+    </div>
 
-        <!-- Map Container -->
-        <div id="map"></div>
+    <!-- Toast de Notificación -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[2000] hidden flex items-center">
+        <div class="bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+            <div id="toast-icon" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+            <span id="toast-message" class="text-sm font-medium tracking-wide">Guardando...</span>
+        </div>
+    </div>
 
-    </main>
+    <!-- Contenedor del Mapa -->
+    <div id="map"></div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
+</main>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tijuanaCoords = [32.5149, -117.0382];
-            
-            const map = L.map('map', {
-                zoomControl: false // Desactivamos el predeterminado para personalizarlo
-            }).setView(tijuanaCoords, 13);
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(map);
+<script>
+document.addEventListener('DOMContentLoaded', () => {
 
-            // Re-añadir el control en la esquina de mayor accesibilidad (pulgar derecho)
-            L.control.zoom({
-                position: 'bottomright'
-            }).addTo(map);
+    // Inicialización del mapa centrada en Tijuana
+    const map = L.map('map', { 
+        zoomControl: false,
+        attributionControl: false 
+    }).setView([32.5149, -117.0382], 13);
 
-            const marker = L.marker(tijuanaCoords).addTo(map);
-            marker.bindPopup("<b class='text-lg'>Tijuana</b><br>Optimizado para uso móvil.").openPopup();
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+    }).addTo(map);
 
-            window.addEventListener('resize', () => {
-                map.invalidateSize();
-            });
-        });
-    </script>
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Estado de la aplicación
+    let tempMarker = null;
+    let savedPoints = [];
+    let routeLine = L.polyline([], {
+        color: '#3b82f6',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '1, 10'
+    }).addTo(map);
+
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+    const pointCountEl = document.getElementById('point-count');
+    const distanceEl = document.getElementById('distance');
+
+    // Funciones de utilidad para UI
+    function showToast(message, loading = true) {
+        toastMsg.textContent = message;
+        toast.classList.remove('hidden');
+        toastIcon.style.display = loading ? 'block' : 'none';
+    }
+
+    function hideToast(delay = 2000) {
+        setTimeout(() => toast.classList.add('hidden'), delay);
+    }
+
+    function updateStats() {
+        pointCountEl.textContent = savedPoints.length;
+        
+        let totalDist = 0;
+        for (let i = 1; i < savedPoints.length; i++) {
+            totalDist += savedPoints[i-1].distanceTo(savedPoints[i]);
+        }
+        distanceEl.textContent = (totalDist / 1000).toFixed(2) + ' km';
+        
+        routeLine.setLatLngs(savedPoints);
+    }
+
+    // Evento de clic en el mapa
+    map.on('click', (e) => {
+        // Si hay un marcador temporal previo, lo quitamos
+        if (tempMarker) map.removeLayer(tempMarker);
+
+        // 1. Poner marcador temporal inmediatamente
+        tempMarker = L.marker(e.latlng).addTo(map);
+
+        // 2. Abrir popup con pregunta
+        const popupContent = `
+            <div class="p-2 min-w-[150px]">
+                <p class="font-semibold text-gray-800 mb-3 text-center text-sm">¿Guardar este punto?</p>
+                <div class="flex flex-col gap-2">
+                    <button id="btn-confirm" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded transition-colors">
+                        SÍ, GUARDAR
+                    </button>
+                    <button id="btn-cancel" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-2 px-4 rounded transition-colors">
+                        CANCELAR
+                    </button>
+                </div>
+            </div>
+        `;
+
+        tempMarker.bindPopup(popupContent, { 
+            closeButton: false, 
+            offset: [0, -20] 
+        }).openPopup();
+    });
+
+    // Delegación de eventos para los botones del popup
+    map.on('popupopen', (e) => {
+        const point = e.popup._source.getLatLng();
+        
+        document.getElementById('btn-confirm').onclick = async () => {
+            // 3. Enviar a Flask
+            showToast('Guardando en servidor...');
+            map.closePopup();
+
+            try {
+                // Implementación de Fetch con timeout o lógica de reintento si fuera necesario
+                const response = await fetch('http://127.0.0.1:5000/guardar_punto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lat: point.lat,
+                        lng: point.lng,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (!response.ok) throw new Error('Error en servidor');
+
+                // Si tiene éxito:
+                savedPoints.push(point);
+                updateStats();
+                
+                // Estilizar el marcador como "guardado" (opcional)
+                tempMarker.getElement().style.filter = "hue-rotate(140deg)"; 
+                tempMarker = null; // Deja de ser temporal
+
+                showToast('¡Guardado correctamente!', false);
+                hideToast();
+
+            } catch (error) {
+                console.error(error);
+                showToast('Error de conexión', false);
+                hideToast();
+                // Si falla, removemos el marcador temporal
+                if (tempMarker) map.removeLayer(tempMarker);
+                tempMarker = null;
+            }
+        };
+
+        document.getElementById('btn-cancel').onclick = () => {
+            if (tempMarker) map.removeLayer(tempMarker);
+            tempMarker = null;
+            map.closePopup();
+        };
+    });
+
+});
+</script>
+
 </body>
 </html>
