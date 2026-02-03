@@ -1,1 +1,0 @@
-Para poder trabajar con la carga de la página le puse un lazy loading y para los errores se pone un mensaje para que el usuario pueda saber que es lo que paso en la página.
