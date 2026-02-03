@@ -1,1 +1,0 @@
-Deje los botones de zoom in y zoom out en la posición por defecto debido a que se encuentran en una posición comoda para su uso en dispositivos móviles.
