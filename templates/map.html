@@ -13,7 +13,7 @@
 
     <style>
         #map {
-            height: 100vh;
+            height: 100%;
             width: 100%;
         }
 
@@ -45,47 +45,72 @@
         #toast.hidden {
             transform: translate(-50%, 100px);
             opacity: 0;
-            display: flex; /* Mantenemos flex para la transición */
+            display: flex;
             pointer-events: none;
+        }
+
+        /* Scrollbar personalizada para la lista */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
         }
     </style>
 </head>
 
 <body class="bg-gray-100 overflow-hidden text-gray-900 font-sans">
 
-<main class="relative h-screen w-full">
+<main class="flex h-screen w-full flex-col md:flex-row">
 
-    <!-- Panel informativo -->
-    <div class="absolute z-[1000] bg-white p-4 rounded-xl shadow-lg border border-gray-200 text-sm
-                top-4 left-1/2 -translate-x-1/2 md:top-4 md:right-4 md:left-auto md:translate-x-0
-                w-64">
-        <h2 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-            Ruta actual
-        </h2>
-        <div class="flex justify-between mb-1">
-            <span class="text-gray-500">Puntos:</span>
-            <span id="point-count" class="font-mono font-bold">0</span>
+    <!-- Columna Izquierda: Panel de Lista (Pestaña en móvil) -->
+    <aside class="w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 flex flex-col h-1/3 md:h-full z-[1001] shadow-2xl md:shadow-none">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="font-bold text-xl text-gray-800 flex items-center gap-2">
+                <span class="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></span>
+                Lugares Guardados
+            </h2>
+            <div class="mt-4 flex gap-4 text-sm">
+                <div class="flex-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p class="text-gray-500 text-xs uppercase font-bold mb-1">Puntos</p>
+                    <span id="point-count" class="text-lg font-mono font-bold">0</span>
+                </div>
+                <div class="flex-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <p class="text-gray-500 text-xs uppercase font-bold mb-1">Distancia</p>
+                    <span id="distance" class="text-lg font-mono font-bold">0.00 km</span>
+                </div>
+            </div>
         </div>
-        <div class="flex justify-between">
-            <span class="text-gray-500">Distancia:</span>
-            <span id="distance" class="font-mono font-bold">0.00 km</span>
-        </div>
-        <p class="text-[11px] text-gray-400 mt-3 italic">
-            Haz clic en cualquier lugar para marcar.
-        </p>
-    </div>
 
-    <!-- Toast de Notificación -->
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[2000] hidden flex items-center">
-        <div class="bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
-            <div id="toast-icon" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-            <span id="toast-message" class="text-sm font-medium tracking-wide">Guardando...</span>
+        <!-- Lista de Lugares -->
+        <div id="places-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            <div id="empty-state" class="text-center py-10">
+                <p class="text-gray-400 text-sm italic">No hay lugares guardados aún.<br>Haz clic en el mapa para añadir uno.</p>
+            </div>
+            <!-- Los elementos de la lista se insertarán aquí -->
         </div>
-    </div>
+        
+        <div class="p-4 bg-gray-50 text-[11px] text-gray-400 border-t border-gray-100">
+            Los puntos se envían automáticamente al servidor tras confirmar.
+        </div>
+    </aside>
 
-    <!-- Contenedor del Mapa -->
-    <div id="map"></div>
+    <!-- Columna Derecha: Mapa -->
+    <section class="flex-1 relative h-2/3 md:h-full">
+        <!-- Toast de Notificación -->
+        <div id="toast" class="absolute bottom-10 left-1/2 -translate-x-1/2 z-[2000] hidden flex items-center">
+            <div class="bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+                <div id="toast-icon" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                <span id="toast-message" class="text-sm font-medium tracking-wide">Guardando...</span>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </section>
 
 </main>
 
@@ -105,7 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
         maxZoom: 19
     }).addTo(map);
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // Controles de Zoom con Aria-Labels para accesibilidad
+    const zoomControl = L.control.zoom({ position: 'bottomright' }).addTo(map);
+    
+    // Asignar aria-labels a los botones de zoom creados por Leaflet
+    const zoomInBtn = document.querySelector('.leaflet-control-zoom-in');
+    const zoomOutBtn = document.querySelector('.leaflet-control-zoom-out');
+    if(zoomInBtn) zoomInBtn.setAttribute('aria-label', 'Acercar mapa');
+    if(zoomOutBtn) zoomOutBtn.setAttribute('aria-label', 'Alejar mapa');
 
     // Estado de la aplicación
     let tempMarker = null;
@@ -122,6 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toastIcon = document.getElementById('toast-icon');
     const pointCountEl = document.getElementById('point-count');
     const distanceEl = document.getElementById('distance');
+    const placesListEl = document.getElementById('places-list');
+    const emptyStateEl = document.getElementById('empty-state');
 
     // Funciones de utilidad para UI
     function showToast(message, loading = true) {
@@ -132,6 +166,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hideToast(delay = 2000) {
         setTimeout(() => toast.classList.add('hidden'), delay);
+    }
+
+    function addToList(point) {
+        if (emptyStateEl) emptyStateEl.style.display = 'none';
+
+        const item = document.createElement('div');
+        // Agregamos cursor-pointer para indicar que es clickeable
+        item.className = "bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-all group cursor-pointer";
+        
+        // Al hacer clic en el ítem, el mapa hace FlyTo a las coordenadas
+        item.onclick = () => {
+            map.flyTo(point, 16, {
+                animate: true,
+                duration: 1.5
+            });
+        };
+
+        item.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="bg-blue-50 p-2 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-bold text-gray-800 text-sm">Punto #${savedPoints.length}</p>
+                    <p class="text-xs text-gray-500 mt-1">Lat: ${point.lat.toFixed(5)}</p>
+                    <p class="text-xs text-gray-500">Long: ${point.lng.toFixed(5)}</p>
+                </div>
+            </div>
+        `;
+        placesListEl.prepend(item);
     }
 
     function updateStats() {
@@ -148,13 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Evento de clic en el mapa
     map.on('click', (e) => {
-        // Si hay un marcador temporal previo, lo quitamos
         if (tempMarker) map.removeLayer(tempMarker);
 
-        // 1. Poner marcador temporal inmediatamente
         tempMarker = L.marker(e.latlng).addTo(map);
 
-        // 2. Abrir popup con pregunta
         const popupContent = `
             <div class="p-2 min-w-[150px]">
                 <p class="font-semibold text-gray-800 mb-3 text-center text-sm">¿Guardar este punto?</p>
@@ -180,12 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const point = e.popup._source.getLatLng();
         
         document.getElementById('btn-confirm').onclick = async () => {
-            // 3. Enviar a Flask
             showToast('Guardando en servidor...');
             map.closePopup();
 
             try {
-                // Implementación de Fetch con timeout o lógica de reintento si fuera necesario
                 const response = await fetch('http://127.0.0.1:5000/guardar_punto', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -200,11 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Si tiene éxito:
                 savedPoints.push(point);
+                addToList(point); // Agregar a la lista de la columna izquierda
                 updateStats();
                 
-                // Estilizar el marcador como "guardado" (opcional)
                 tempMarker.getElement().style.filter = "hue-rotate(140deg)"; 
-                tempMarker = null; // Deja de ser temporal
+                tempMarker = null; 
 
                 showToast('¡Guardado correctamente!', false);
                 hideToast();
@@ -213,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(error);
                 showToast('Error de conexión', false);
                 hideToast();
-                // Si falla, removemos el marcador temporal
                 if (tempMarker) map.removeLayer(tempMarker);
                 tempMarker = null;
             }

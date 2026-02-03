@@ -1,0 +1,1 @@
+Se agregaron las mejoras de accesibilidad para poder ir hacia los puntos realizados por medio de la barra lateral, además de mejorar la posición de los botones de zoom in y zoom out
